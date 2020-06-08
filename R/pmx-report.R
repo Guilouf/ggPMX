@@ -2,9 +2,10 @@
 #'
 #' @param contr \code{pmxClass} controller
 #' @param name \code{character} The report name
-#' @param format \code{character} the result type, can be \cr
+#' @param output \code{character} the result type, can be \cr
 #' a standalone directory of plots or a report document as defined in the template \cr
 #' (pdf, docx,..) ,or both
+#' User can specify one output from c("all", "plots", "report"). output "all" to have standalone directory of plots and report.
 #' @param template \code{character} ggPMX predefined template or the
 #' path to a custom rmarkdwon template. \cr
 #' Use \code{\link{pmx_report_template}} to get the list
@@ -14,7 +15,7 @@
 #' @param footnote \code{logical}  TRUE to add a footnote to the generated plots. The default footnote is to add \cr
 #' the path where the plot is saved.
 #' @param edit \code{logical}  TRUE to edit the template immediately
-#' @param extension \code{character} The output document format. By default, a word report is generated. \cr
+#' @param format \code{character} The output document format. By default, a word report is generated. \cr
 #'  User can specify one or more formats from c("word","pdf","html","all"). extnestion "all" to generate all formats.
 #' @param title \code{character} report title (optional)
 #' @param ... extra parameters depending in the template used
@@ -31,21 +32,21 @@ pmx_report <-
   function(contr,
              name,
              save_dir,
-             format = c("both", "plots", "report"),
+             output = c("all", "plots", "report"),
              template = "standing",
-             footnote = format == "both",
+             footnote = output == "all",
              edit = FALSE,
-             extension = NULL,
+             format = NULL,
              title,
              ...) {
     assert_that(is_pmxclass(contr))
-    format <- match.arg(format)
-    if (missing(extension) || is.null(extension)) extension <- "word"
+    output <- match.arg(output)
+    if (missing(format) || is.null(format)) format <- "word"
 
-    if (!"all" %in% extension) {
-      extension <- sprintf("%s_document", extension)
+    if (!"all" %in% format) {
+      format <- sprintf("%s_document", format)
     } else {
-      extension <- "all"
+      format <- "all"
     }
     on.exit({
       remove_temp_files(contr$save_dir)
@@ -62,7 +63,7 @@ pmx_report <-
 
     contr$footnote <- footnote
     res <- pmx_draft(contr, name, template, edit)
-    standalone <- format %in% c("plots", "both")
+    standalone <- output %in% c("plots", "all")
     clean <- !standalone
     old_fig_process <- knitr::opts_chunk$get("fig.process")
 
@@ -97,7 +98,7 @@ pmx_report <-
       res,
       params = params,
       envir = envir,
-      output_format = extension,
+      output_format = format,
       output_dir = save_dir,
       clean = clean,
       quiet = TRUE
@@ -113,9 +114,9 @@ pmx_report <-
 
     if (!clean) {
       ## create_ggpmx_gof(ctr$save_dir, name)
-      remove_reports(format, contr$save_dir)
+      remove_reports(output, contr$save_dir)
     }
-    if (format == "report") rm_dir(out_)
+    if (output == "report") rm_dir(out_)
   }
 
 
@@ -191,8 +192,8 @@ remove_temp_files <-
     invisible(file.remove(temp_files))
   }
 
-remove_reports <- function(format, save_dir) {
-  if (format == "plots") {
+remove_reports <- function(output, save_dir) {
+  if (output == "plots") {
     invisible(file.remove(list.files(
       pattern = "(.pdf|.docx|Rmd)$",
       path = save_dir, full.names = TRUE
